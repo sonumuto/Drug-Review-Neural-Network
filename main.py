@@ -5,44 +5,64 @@ import numpy as np
 import pandas as pd
 import random
 
-# HYPERPARAMETERS
-input_size =
-output_size =
-[hidden_layers_sizes] =
-learning_rate =
-number_of_epochs =
-train_data_path = "./data/drugLibTrain_raw.tsv"  # please use relative path like this
-test_data_path = "./data/drugLibTest_raw.tsv"  # please use relative path like this
+"""
+My inputs are: length of side effects, length of benefits and words of comments
+My output is one hot encoding
+Hidden layers are the same size of inputs
+"""
 
-def sigmoid_function(x):
+
+# HYPERPARAMETERS
+input_size = 5
+output_size = 10
+hidden_layers_sizes = [input_size, input_size]
+learning_rate = 0.5
+number_of_epochs = 5
+
+inputs = [np.random.uniform(-1, 1) for _ in range(input_size)]
+
+h1 = [0] * hidden_layers_sizes[0]
+h2 = [0] * hidden_layers_sizes[1]
+
+# initilize weights
+w = [[[np.random.uniform(-1, 1) for _ in range(input_size)] for _ in range(hidden_layers_sizes[0])],
+     [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[0])] for _ in range(hidden_layers_sizes[1])],
+     [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[1])] for _ in range(output_size)]]
+
+w1 = [[np.random.uniform(-1, 1) for _ in range(input_size)] for _ in range(hidden_layers_sizes[0])]
+w2 = [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[0])] for _ in range(hidden_layers_sizes[1])]
+w3 = [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[1])] for _ in range(output_size)]
+
+
+# sigmoid function
+def activation_function(x):
     return 1 / (1 + np.exp(-x))
 
-def activation_function(layer):
-
-
 def derivation_of_activation_function(signal):
-
+    pass
 
 def loss_function(true_labels, probabilities):
+    pass
 
-
+# RSS 1/2 * sigma((target - output)**2)
 def rss(layer):
-
+    pass
 
 # sum-of-squares error (rss) is used to turn activations into probability distribution
 
 def derivation_of_loss_function(true_labels, probabilities):
-
+    pass
 
 # the derivation should be with respect to the output neurons
 
 def forward_pass(data):
+    pass
 
 
 # [hidden_layers] is not an argument, but it is up to you how many hidden layers to implement.
 # so replace it with your desired hidden layers
-def backward_pass(input_layer, [hidden_layers], output_layer, loss):
-
+def backward_pass(input_layer, hidden_layers, output_layer, loss):
+    pass
 
 def train(train_data, train_labels, valid_data, valid_labels):
     for epoch in range(number_of_epochs):
@@ -62,7 +82,7 @@ def train(train_data, train_labels, valid_data, valid_labels):
 
             index += 1
 
-    return losses
+    # return losses
 
 
 def test(test_data, test_labels):
@@ -99,7 +119,9 @@ def accuracy(true_labels, predictions):
 
     return true_pred / len(predictions)
 
+print(activation_function(np.dot(inputs, w1)))
 
+"""
 if __name__ == "__main__":
 
     train_data = pd.read_csv(train_data_path, sep='\t')
@@ -133,3 +155,4 @@ if __name__ == "__main__":
     train(train_x, train_y, valid_x, valid_y)
     print("Test Scores:")
     print(test(test_x, test_y))
+"""

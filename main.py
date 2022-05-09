@@ -1,45 +1,54 @@
-# Student Name: ???
-# Student ID: ???
+# Student Name: Samet Umut Yigitoglu
+# Student ID: 260201056
 
 import numpy as np
 import pandas as pd
 import random
 
-"""
-My inputs are: length of side effects, length of benefits and words of comments
-My output is one hot encoding
-Hidden layers are the same size of inputs
-"""
-
+train_data_path = "./data/drugLibTrain_raw.tsv"
+test_data_path = "./data/drugLibTest_raw.tsv"
 
 # HYPERPARAMETERS
-input_size = 5
+input_size = 12
 output_size = 10
-hidden_layers_sizes = [input_size, input_size]
+hidden_layer_sizes = [input_size, input_size]
 learning_rate = 0.5
 number_of_epochs = 5
 
+# 'He Initialization' for weights and initial 0.01 values for all biases
+W_B = {
+    'W1': np.random.randn(hidden_layer_sizes[0], input_size) * np.sqrt(2/hidden_layer_sizes[0]),
+    'b1': np.ones((hidden_layer_sizes[0], 1)) * 0.01,
+    'W2': np.random.randn(hidden_layer_sizes[1], hidden_layer_sizes[0]) * np.sqrt(2/hidden_layer_sizes[0]),
+    'b2': np.ones((hidden_layer_sizes[1], 1)) * 0.01,
+    'W3': np.random.randn(output_size, hidden_layer_sizes[1]) * np.sqrt(2/hidden_layer_sizes[1]),
+    'b3': np.ones((output_size, 1)) * 0.01
+}
+
 inputs = [np.random.uniform(-1, 1) for _ in range(input_size)]
 
-h1 = [0] * hidden_layers_sizes[0]
-h2 = [0] * hidden_layers_sizes[1]
+h = [[np.random.uniform(-1, 1) for _ in range(input_size)],
+     [np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[0])],
+     [np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[1])],
+     [np.random.uniform(-1, 1) for _ in range(output_size)]]
 
-# initilize weights
-w = [[[np.random.uniform(-1, 1) for _ in range(input_size)] for _ in range(hidden_layers_sizes[0])],
-     [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[0])] for _ in range(hidden_layers_sizes[1])],
-     [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[1])] for _ in range(output_size)]]
 
-w1 = [[np.random.uniform(-1, 1) for _ in range(input_size)] for _ in range(hidden_layers_sizes[0])]
-w2 = [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[0])] for _ in range(hidden_layers_sizes[1])]
-w3 = [[np.random.uniform(-1, 1) for _ in range(hidden_layers_sizes[1])] for _ in range(output_size)]
+# initialize weights
+w = [[[np.random.uniform(-1, 1) for _ in range(input_size)] for _ in range(hidden_layer_sizes[0])],
+     [[np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[0])] for _ in range(hidden_layer_sizes[1])],
+     [[np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[1])] for _ in range(output_size)]]
 
 
 # sigmoid function
-def activation_function(x):
-    return 1 / (1 + np.exp(-x))
+def activation_function(layer):
+    sigmoid = lambda x: 1 / (1 + np.exp(-x))
+    return sigmoid(layer)
+
 
 def derivation_of_activation_function(signal):
-    pass
+    sigmoid_derivation = lambda x: (1 / (1 + np.exp(-x))) * (1 - (1 / (1 + np.exp(-x))))
+    # activation = [sigmoid_derivation(np.dot(h[signal - 1], w[signal - 1][i])) for i in range(len(h[signal]))]
+    return sigmoid_derivation(signal)
 
 def loss_function(true_labels, probabilities):
     pass
@@ -56,7 +65,17 @@ def derivation_of_loss_function(true_labels, probabilities):
 # the derivation should be with respect to the output neurons
 
 def forward_pass(data):
-    pass
+    # h[0] = data
+    for i in range(1, len(h) - 1):
+        h[i] = [activation_function(np.dot(h[i - 1], w[i - 1][j])) for j in range(len(h[i]))]
+    outputs = [np.dot(h[len(h) - 2], w[len(h) - 2][j]) for j in range(output_size)]
+    sorted_outputs = sorted(outputs)
+    max_index = outputs.index(sorted_outputs[0])
+    h[len(h) - 1] = [0] * output_size
+    h[len(h) - 1][max_index] = 1
+    print(h[len(h) - 1])
+
+
 
 
 # [hidden_layers] is not an argument, but it is up to you how many hidden layers to implement.
@@ -119,28 +138,26 @@ def accuracy(true_labels, predictions):
 
     return true_pred / len(predictions)
 
-print(activation_function(np.dot(inputs, w1)))
+forward_pass(h[0])
 
-"""
 if __name__ == "__main__":
 
     train_data = pd.read_csv(train_data_path, sep='\t')
     test_data = pd.read_csv(test_data_path, sep='\t')
-    train_x = [
-        input_features]  # use train_data['commentsReview'] or concatenate benefitsReview, sideEffectsReview, and commentsReview
+    train_x = train_data["commentsReview"]
     train_y = train_data['rating']
-    test_x = [
-        input_features]  # use test_data['commentsReview'] or concatenate benefitsReview, sideEffectsReview, and commentsReview
+    test_x = ["commentsReview"]
+    print(train_x)
     test_y = test_data['rating']
 
     # creating one-hot vector notation of labels. (Labels are given numeric in the dataset)
     new_train_y = np.zeros(shape=(len(train_y), output_size))
     new_test_y = np.zeros(shape=(len(test_y), output_size))
 
-    for i in range(len(train_y)):
+    for i in range(len(train_y) - 1):
         new_train_y[i][train_y[i]] = 1
 
-    for i in range(len(test_y)):
+    for i in range(len(test_y) - 1):
         new_test_y[i][test_y[i]] = 1
 
     train_y = new_train_y
@@ -155,4 +172,3 @@ if __name__ == "__main__":
     train(train_x, train_y, valid_x, valid_y)
     print("Test Scores:")
     print(test(test_x, test_y))
-"""

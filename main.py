@@ -3,17 +3,24 @@
 
 import numpy as np
 import pandas as pd
-import random
+import vec
+
 
 train_data_path = "./data/drugLibTrain_raw.tsv"
 test_data_path = "./data/drugLibTest_raw.tsv"
 
+vector = vec.Vector(train_data_path, test_data_path)
+words = vector.get_words()
+
 # HYPERPARAMETERS
 input_size = 12
 output_size = 10
-hidden_layer_sizes = [input_size, input_size]
+hidden_layer_sizes = [8, 5]
 learning_rate = 0.5
 number_of_epochs = 5
+
+input = np.array([1, 2, 6, 0, 5, 7, 1, 9, 4, 3, 6, 1])
+print(input.T)
 
 # 'He Initialization' for weights and initial 0.01 values for all biases
 W_B = {
@@ -25,20 +32,6 @@ W_B = {
     'b3': np.ones((output_size, 1)) * 0.01
 }
 
-inputs = [np.random.uniform(-1, 1) for _ in range(input_size)]
-
-h = [[np.random.uniform(-1, 1) for _ in range(input_size)],
-     [np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[0])],
-     [np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[1])],
-     [np.random.uniform(-1, 1) for _ in range(output_size)]]
-
-
-# initialize weights
-w = [[[np.random.uniform(-1, 1) for _ in range(input_size)] for _ in range(hidden_layer_sizes[0])],
-     [[np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[0])] for _ in range(hidden_layer_sizes[1])],
-     [[np.random.uniform(-1, 1) for _ in range(hidden_layer_sizes[1])] for _ in range(output_size)]]
-
-
 # sigmoid function
 def activation_function(layer):
     sigmoid = lambda x: 1 / (1 + np.exp(-x))
@@ -46,12 +39,14 @@ def activation_function(layer):
 
 
 def derivation_of_activation_function(signal):
-    sigmoid_derivation = lambda x: (1 / (1 + np.exp(-x))) * (1 - (1 / (1 + np.exp(-x))))
-    # activation = [sigmoid_derivation(np.dot(h[signal - 1], w[signal - 1][i])) for i in range(len(h[signal]))]
-    return sigmoid_derivation(signal)
+    return (1 - signal) * signal
+
 
 def loss_function(true_labels, probabilities):
-    pass
+    x = probabilities['Y']
+    x = np.array(x)
+    true_labels = np.array(true_labels, dtype=int)
+
 
 # RSS 1/2 * sigma((target - output)**2)
 def rss(layer):
@@ -65,25 +60,45 @@ def derivation_of_loss_function(true_labels, probabilities):
 # the derivation should be with respect to the output neurons
 
 def forward_pass(data):
-    # h[0] = data
-    for i in range(1, len(h) - 1):
-        h[i] = [activation_function(np.dot(h[i - 1], w[i - 1][j])) for j in range(len(h[i]))]
-    outputs = [np.dot(h[len(h) - 2], w[len(h) - 2][j]) for j in range(output_size)]
-    sorted_outputs = sorted(outputs)
-    max_index = outputs.index(sorted_outputs[0])
-    h[len(h) - 1] = [0] * output_size
-    h[len(h) - 1][max_index] = 1
-    print(h[len(h) - 1])
+    z1 = np.dot(data, W_B['W1'].T) + W_B['b1'].T
+    print(data.shape, z1.shape)
+    a1 = activation_function(z1)
 
+    z2 = np.dot(a1, W_B['W2'].T) + W_B['b2'].T
+    a2 = activation_function(z2)
+
+    z3 = np.dot(a2, W_B['W3'].T) + W_B['b3'].T
+    #TODO: linear bla bla
+    y = activation_function(z3)
+
+    forward_results = {"Z1": z1,
+                       "A1": a1,
+                       "Z2": z2,
+                       "A2": a2,
+                       "Z3": z3,
+                       "Y": y}
+    return forward_results
 
 
 
 # [hidden_layers] is not an argument, but it is up to you how many hidden layers to implement.
 # so replace it with your desired hidden layers
-def backward_pass(input_layer, hidden_layers, output_layer, loss):
-    pass
+def backward_pass(input_layer, output_layer, loss):
+    output_delta = loss
+    z3_delta = np.dot(output_delta, W_B['W3'])
+    a2_delta = z3_delta * derivation_of_activation_function(output_layer['A2'])
+    z2_delta = np.dot(a2_delta, W_B['W2'])
+    a1_delta = z2_delta * derivation_of_activation_function(output_layer['A1'])
+
+    W_B['W3'] -= learning_rate * np.dot(output_delta.T, output_layer['A2'])
+    W_B['b3'] -= learning_rate * np.sum(output_delta, axis=1, keepdims=True)
+    W_B['W2'] -= learning_rate * np.dot(a2_delta.T, output_layer['A1'])
+    W_B['b2'] -= learning_rate * np.sum(a2_delta, axis=1, keepdims=True)
+    W_B['W1'] -= learning_rate * np.outer(input_layer, a1_delta).T
+    W_B['b1'] -= learning_rate * np.sum(a1_delta, axis=1)
 
 def train(train_data, train_labels, valid_data, valid_labels):
+    accuracy_list = np.array([])
     for epoch in range(number_of_epochs):
         index = 0
 
@@ -94,7 +109,7 @@ def train(train_data, train_labels, valid_data, valid_labels):
             backward_pass(data, [hidden_layers], predictions, loss_signals)
             loss = loss_function(labels, predictions)
 
-            if index % 2000 == 0:  # at each 2000th sample, we run validation set to see our model's improvements
+            if index % 400 == 0:  # at each 2000th sample, we run validation set to see our model's improvements
                 accuracy, loss = test(valid_data, valid_labels)
                 print("Epoch= " + str(epoch) + ", Coverage= %" + str(
                     100 * (index / len(train_data))) + ", Accuracy= " + str(accuracy) + ", Loss= " + str(loss))
@@ -138,28 +153,24 @@ def accuracy(true_labels, predictions):
 
     return true_pred / len(predictions)
 
-forward_pass(h[0])
 
 if __name__ == "__main__":
-
     train_data = pd.read_csv(train_data_path, sep='\t')
     test_data = pd.read_csv(test_data_path, sep='\t')
-    train_x = train_data["commentsReview"]
-    train_y = train_data['rating']
+    train_x = ["commentsReview"]
+    train_y = ['rating']
     test_x = ["commentsReview"]
-    print(train_x)
-    test_y = test_data['rating']
+    test_y = ['rating']
+
 
     # creating one-hot vector notation of labels. (Labels are given numeric in the dataset)
     new_train_y = np.zeros(shape=(len(train_y), output_size))
     new_test_y = np.zeros(shape=(len(test_y), output_size))
-
     for i in range(len(train_y) - 1):
-        new_train_y[i][train_y[i]] = 1
+        new_train_y[i][train_y[i] - 1] = 1
 
     for i in range(len(test_y) - 1):
-        new_test_y[i][test_y[i]] = 1
-
+        new_test_y[i][test_y[i] - 1] = 1
     train_y = new_train_y
     test_y = new_test_y
 
@@ -171,4 +182,11 @@ if __name__ == "__main__":
 
     train(train_x, train_y, valid_x, valid_y)
     print("Test Scores:")
-    print(test(test_x, test_y))
+    #print(test(test_x, test_y))
+
+
+result = forward_pass(input)
+# print(result['Y'])
+backward_pass(input, result, result["Y"])
+result = forward_pass(input)
+# print(result['Y'])

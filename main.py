@@ -2,7 +2,6 @@
 # Student ID: 260201056
 
 import numpy as np
-import pandas as pd
 import vec
 
 
@@ -10,17 +9,19 @@ train_data_path = "./data/drugLibTrain_raw.tsv"
 test_data_path = "./data/drugLibTest_raw.tsv"
 
 vector = vec.Vector(train_data_path, test_data_path)
-words = vector.get_words()
+
+all_words = vector.all_words
+train_x = vector.train_words
+train_y = vector.train_rating
+test_x = vector.test_words
+test_y = vector.test_rating
 
 # HYPERPARAMETERS
-input_size = 12
+input_size = len(all_words)
 output_size = 10
-hidden_layer_sizes = [8, 5]
-learning_rate = 0.5
+hidden_layer_sizes = [200, 150]
+learning_rate = 0.05
 number_of_epochs = 5
-
-input = np.array([1, 2, 6, 0, 5, 7, 1, 9, 4, 3, 6, 1])
-print(input.T)
 
 # 'He Initialization' for weights and initial 0.01 values for all biases
 W_B = {
@@ -32,10 +33,10 @@ W_B = {
     'b3': np.ones((output_size, 1)) * 0.01
 }
 
+
 # sigmoid function
 def activation_function(layer):
-    sigmoid = lambda x: 1 / (1 + np.exp(-x))
-    return sigmoid(layer)
+    return 1 / (1 + np.exp(-layer))
 
 
 def derivation_of_activation_function(signal):
@@ -43,40 +44,37 @@ def derivation_of_activation_function(signal):
 
 
 def loss_function(true_labels, probabilities):
-    x = probabilities['Y']
-    x = np.array(x)
-    true_labels = np.array(true_labels, dtype=int)
+    value = true_labels - probabilities["Y"]
+    return rss(value)
 
 
 # RSS 1/2 * sigma((target - output)**2)
 def rss(layer):
-    pass
+    return np.sum(layer ** 2)
 
 # sum-of-squares error (rss) is used to turn activations into probability distribution
 
 def derivation_of_loss_function(true_labels, probabilities):
-    pass
+    return probabilities["Y"] - true_labels
 
 # the derivation should be with respect to the output neurons
 
 def forward_pass(data):
     z1 = np.dot(data, W_B['W1'].T) + W_B['b1'].T
-    print(data.shape, z1.shape)
     a1 = activation_function(z1)
 
     z2 = np.dot(a1, W_B['W2'].T) + W_B['b2'].T
     a2 = activation_function(z2)
 
-    z3 = np.dot(a2, W_B['W3'].T) + W_B['b3'].T
-    #TODO: linear bla bla
-    y = activation_function(z3)
+    y = np.dot(a2, W_B['W3'].T) + W_B['b3'].T
+
 
     forward_results = {"Z1": z1,
                        "A1": a1,
                        "Z2": z2,
                        "A2": a2,
-                       "Z3": z3,
                        "Y": y}
+
     return forward_results
 
 
@@ -90,9 +88,9 @@ def backward_pass(input_layer, output_layer, loss):
     z2_delta = np.dot(a2_delta, W_B['W2'])
     a1_delta = z2_delta * derivation_of_activation_function(output_layer['A1'])
 
-    W_B['W3'] -= learning_rate * np.dot(output_delta.T, output_layer['A2'])
+    W_B['W3'] -= learning_rate * np.outer(output_layer['A2'], output_delta).T
     W_B['b3'] -= learning_rate * np.sum(output_delta, axis=1, keepdims=True)
-    W_B['W2'] -= learning_rate * np.dot(a2_delta.T, output_layer['A1'])
+    W_B['W2'] -= learning_rate * np.outer(output_layer['A1'], a2_delta).T
     W_B['b2'] -= learning_rate * np.sum(a2_delta, axis=1, keepdims=True)
     W_B['W1'] -= learning_rate * np.outer(input_layer, a1_delta).T
     W_B['b1'] -= learning_rate * np.sum(a1_delta, axis=1)
@@ -104,10 +102,10 @@ def train(train_data, train_labels, valid_data, valid_labels):
 
         # Same thing about [hidden_layers] mentioned above is valid here also
         for data, labels in zip(train_data, train_labels):
-            predictions, [hidden_layers] = forward_pass(data)
-            loss_signals = derivation_of_loss_function(labels, predictions)
-            backward_pass(data, [hidden_layers], predictions, loss_signals)
-            loss = loss_function(labels, predictions)
+            output = forward_pass(data)
+            loss_signals = derivation_of_loss_function(labels, output)
+            backward_pass(data, output, loss_signals)
+            loss = loss_function(labels, output)
 
             if index % 400 == 0:  # at each 2000th sample, we run validation set to see our model's improvements
                 accuracy, loss = test(valid_data, valid_labels)
@@ -125,8 +123,8 @@ def test(test_data, test_labels):
     labels = []
 
     for data, label in zip(test_data, test_labels):  # Turns through all data
-        prediction, _, _ = forward_pass(data)
-        predictions.append(prediction)
+        prediction = forward_pass(data)
+        predictions.append(prediction["Y"])
         labels.append(label)
         avg_loss += np.sum(loss_function(label, prediction))
 
@@ -155,12 +153,6 @@ def accuracy(true_labels, predictions):
 
 
 if __name__ == "__main__":
-    train_data = pd.read_csv(train_data_path, sep='\t')
-    test_data = pd.read_csv(test_data_path, sep='\t')
-    train_x = ["commentsReview"]
-    train_y = ['rating']
-    test_x = ["commentsReview"]
-    test_y = ['rating']
 
 
     # creating one-hot vector notation of labels. (Labels are given numeric in the dataset)
@@ -182,11 +174,5 @@ if __name__ == "__main__":
 
     train(train_x, train_y, valid_x, valid_y)
     print("Test Scores:")
-    #print(test(test_x, test_y))
+    print(test(test_x, test_y))
 
-
-result = forward_pass(input)
-# print(result['Y'])
-backward_pass(input, result, result["Y"])
-result = forward_pass(input)
-# print(result['Y'])

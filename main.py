@@ -97,7 +97,7 @@ input_size = len(all_words)
 output_size = 10
 hidden_layer_sizes = [200, 150]
 learning_rate = 0.05
-number_of_epochs = 5
+number_of_epochs = 50
 
 # Initialize weights and biases
 W_B = {

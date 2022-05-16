@@ -3,6 +3,7 @@
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class Vector:
@@ -28,6 +29,7 @@ class Vector:
         return [i for i in values if i]
 
     def __init_words(self):
+        print("Reading files and creating inputs.")
         train = pd.read_csv(self.train_file, sep='\t')
         test = pd.read_csv(self.test_file, sep='\t')
         data = pd.concat([train, test])
@@ -97,7 +99,7 @@ input_size = len(all_words)
 output_size = 10
 hidden_layer_sizes = [200, 150]
 learning_rate = 0.05
-number_of_epochs = 50
+number_of_epochs = 5
 
 # Initialize weights and biases
 W_B = {
@@ -172,18 +174,41 @@ def backward_pass(input_layer, output_layer, loss):
 
 def train(train_data, train_labels, valid_data, valid_labels):
     for epoch in range(number_of_epochs):
+        accuracy_list = []
+        loss_list = []
         index = 0
         for data, labels in zip(train_data, train_labels):
             output = forward_pass(data)
             loss_signals = derivation_of_loss_function(labels, output)
             backward_pass(data, output, loss_signals)
-
-            if index % 400 == 0:  # at each 400th sample, we run validation set to see our model's improvements
+            coverage = "{:.2f}".format(100 * (index / len(train_data)))
+            if index % 20 == 0:
                 accuracy, loss = test(valid_data, valid_labels)
-                print("Epoch= " + str(epoch) + ", Coverage= %" + str(
-                    100 * (index / len(train_data))) + ", Accuracy= " + str(accuracy) + ", Loss= " + str(loss))
-
+                accuracy_list.append(accuracy)
+                loss_list.append(loss)
+                if index % 400 == 0: # at each 400th sample, we run validation set to see our model's improvements
+                    print("\rEpoch= " + str(epoch) + ", Coverage= %" + str(coverage) + ", Accuracy= " + str(accuracy) + ", Loss= " + str(loss),
+                          end='', flush=True)
+                    print()
+            print("\rEpoch= " + str(epoch) + ", Coverage= %" + str(coverage), end='',
+                  flush=True)
             index += 1
+
+        # Plot for loss and accuracy
+        accuracy_list = np.array(accuracy_list)
+        loss_list = np.array(loss_list)
+        ax = np.arange(0, len(accuracy_list))
+        fig, axs = plt.subplots(2)
+        axs[0].plot(ax, accuracy_list, color='green', marker='.')
+        axs[0].set_title('Accuracy of Epoch' + str(epoch))
+        axs[1].plot(ax, loss_list, color='orange', marker='.')
+        axs[1].set_title('Loss of Epoch' + str(epoch))
+        plot_file = "epoch" + str(epoch) + "_plot.png"
+        # Hide x labels and tick labels for all but bottom plot.
+        for ax in axs:
+            ax.label_outer()
+
+        plt.savefig(plot_file)
 
 
 def test(test_data, test_labels):
@@ -240,5 +265,6 @@ if __name__ == "__main__":
     train_y = np.asarray(train_y[0:int(0.75 * len(train_y))])
 
     train(train_x, train_y, valid_x, valid_y)
-    print("Test Scores:")
+    print("\nTest Scores:")
     print(test(test_x, test_y))
+
